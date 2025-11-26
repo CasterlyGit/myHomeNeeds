@@ -1,201 +1,234 @@
-import { router } from "expo-router";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, getDocs } from "firebase/firestore";
-import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { auth, db } from "../../firebase/config";
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Colors, Components, Layout, Typography } from '../../constants';
+import { auth } from '../../firebase/config';
+import { useUserRole } from '../../hooks/useUserRole';
+
+// Reusable Task Card Component
+const TaskCard = ({ 
+  title, 
+  description, 
+  icon, 
+  onPress, 
+  comingSoon = false 
+}: { 
+  title: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  comingSoon?: boolean;
+}) => {
+  return (
+    <TouchableOpacity 
+      style={[
+        Components.taskCard,
+        comingSoon && { opacity: 0.6 }
+      ]}
+      onPress={onPress}
+      disabled={comingSoon}
+    >
+      <View style={Components.taskCardHeader}>
+        <View style={Components.taskCardIcon}>
+          <Ionicons name={icon} size={24} color={Colors.text.accent} />
+        </View>
+        {comingSoon && (
+          <View style={Components.taskCardComingSoon}>
+            <Text style={styles.comingSoonText}>Coming Soon</Text>
+          </View>
+        )}
+      </View>
+      
+      <Text style={Typography.header}>{title}</Text>
+      <Text style={Typography.body2}>{description}</Text>
+      
+      <View style={Components.taskCardFooter}>
+        <Ionicons name="chevron-forward" size={16} color={Colors.text.secondary} />
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export default function HomeScreen() {
-  const [user, setUser] = useState(null);
+  const { role, loading } = useUserRole();
+  const [user, setUser] = useState(auth.currentUser);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      // Auto-redirect if no user
-      if (!user) {
-        router.replace("/login");
-      }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
     });
-    return unsubscribe;
+    
+    return unsubscribe; // Cleanup on unmount
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.replace("/login");
-    } catch (error) {
-      alert("Error signing out");
-    }
-  };
-
-  const checkTaskerProfile = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "taskers"));
-      const userTaskerProfile = querySnapshot.docs.find(
-        doc => doc.data().userId === auth.currentUser?.uid
-      );
-      
-      if (userTaskerProfile) {
-        router.push("/tasker-services");
-      } else {
-        router.push("/tasker-register");
-      }
-    } catch (error) {
-      alert("Error checking profile");
-    }
-  };
-
-  // If user is not logged in, redirect to login
-  if (!user) {
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={Layout.centered}>
+        <Text style={Typography.subtitle}>Loading...</Text>
       </View>
     );
   }
 
+  const taskCards = [
+    {
+      id: 1,
+      title: "Home Cooked Food",
+      description: "Order delicious homemade meals from local cooks",
+      icon: "restaurant" as keyof typeof Ionicons.glyphMap,
+      onPress: () => router.push('/meals-browse'),
+      comingSoon: false
+    },
+    {
+      id: 2,
+      title: "Pet Sitter",
+      description: "Find trusted pet sitters in your neighborhood",
+      icon: "paw" as keyof typeof Ionicons.glyphMap,
+      onPress: () => {},
+      comingSoon: true
+    },
+    {
+      id: 3,
+      title: "Cleaner",
+      description: "Book professional cleaning services",
+      icon: "sparkles" as keyof typeof Ionicons.glyphMap,
+      onPress: () => {},
+      comingSoon: true
+    }
+  ];
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>myHomeNeeds</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity onPress={() => router.push("/settings")} style={styles.settingsButton}>
-            <Text style={styles.settingsButtonText}>⚙️</Text>
+    <View style={Layout.container}>
+      {/* Header with Login/User Info */}
+      <View style={Components.header}>
+        {user ? (
+          <View style={Components.userInfo}>
+            <Ionicons name="person-circle" size={24} color={Colors.text.accent} />
+            <Text style={Components.userName}>
+              {user.displayName || user.email?.split('@')[0] || 'User'}
+            </Text>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={Components.loginButton}
+            onPress={() => router.push('/login')}
+          >
+            <Ionicons name="log-in" size={20} color={Colors.text.accent} />
+            <Text style={Typography.buttonSecondary}>Login</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleLogout}>
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+        )}
       </View>
-      
-      <Text style={styles.subtitle}>Get things done, the easy way</Text>
-      
-      <ScrollView style={styles.cardsContainer}>
-        <TouchableOpacity 
-          style={styles.card}
-          onPress={() => router.push("/meals-browse")}
-        >
-          <Text style={styles.cardIcon}>🍛</Text>
-          <Text style={styles.cardTitle}>Home Cooked Meals</Text>
-          <Text style={styles.cardDescription}>Fresh meals from local cooks</Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.card}
-          onPress={() => router.push("/user-orders")}
-        >
-          <Text style={styles.cardIcon}>📦</Text>
-          <Text style={styles.cardTitle}>My Orders</Text>
-          <Text style={styles.cardDescription}>Track your food orders</Text>
-        </TouchableOpacity>
+      <ScrollView showsVerticalScrollIndicator={false} style={Layout.scrollView}>
+        <Text style={Typography.title}>myHomeNeeds</Text>
+        <Text style={Typography.subtitle}>
+          Your home services marketplace
+        </Text>
 
-        <TouchableOpacity style={styles.card}>
-          <Text style={styles.cardIcon}>🐕</Text>
-          <Text style={styles.cardTitle}>Pet Sitting</Text>
-          <Text style={styles.cardDescription}>Trusted pet care</Text>
-        </TouchableOpacity>
+        {/* Task Cards Grid */}
+        <View style={styles.cardsContainer}>
+          {taskCards.map((card) => (
+            <TaskCard
+              key={card.id}
+              title={card.title}
+              description={card.description}
+              icon={card.icon}
+              onPress={card.onPress}
+              comingSoon={card.comingSoon}
+            />
+          ))}
+        </View>
 
-        <TouchableOpacity style={styles.card}>
-          <Text style={styles.cardIcon}>🧹</Text>
-          <Text style={styles.cardTitle}>Cleaning Service</Text>
-          <Text style={styles.cardDescription}>Spotless cleaning</Text>
-        </TouchableOpacity>
+        {/* Quick Actions for Logged-in Users */}
+        {user && (
+          <View style={Layout.section}>
+            <Text style={Typography.header}>Quick Actions</Text>
+            <View style={styles.actionButtons}>
+              {role === 'cook' ? (
+                <>
+                  <TouchableOpacity 
+                    style={Components.buttonAction}
+                    onPress={() => router.push('/tasker-dashboard')}
+                  >
+                    <Ionicons name="grid" size={20} color={Colors.text.accent} />
+                    <Text style={Typography.buttonSecondary}>Dashboard</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={Components.buttonAction}
+                    onPress={() => router.push('/cook-menu')}
+                  >
+                    <Ionicons name="fast-food" size={20} color={Colors.text.accent} />
+                    <Text style={Typography.buttonSecondary}>My Menu</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={Components.buttonAction}
+                    onPress={() => router.push('/user-orders')}
+                  >
+                    <Ionicons name="receipt" size={20} color={Colors.text.accent} />
+                    <Text style={Typography.buttonSecondary}>Orders</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity 
+                    style={Components.buttonAction}
+                    onPress={() => router.push('/user-orders')}
+                  >
+                    <Ionicons name="receipt" size={20} color={Colors.text.accent} />
+                    <Text style={Typography.buttonSecondary}>My Orders</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={Components.buttonAction}
+                    onPress={() => router.push('/meals-browse')}
+                  >
+                    <Ionicons name="search" size={20} color={Colors.text.accent} />
+                    <Text style={Typography.buttonSecondary}>Browse Food</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        )}
 
-        <TouchableOpacity style={styles.card}>
-          <Text style={styles.cardIcon}>📋</Text>
-          <Text style={styles.cardTitle}>Other Tasks</Text>
-          <Text style={styles.cardDescription}>Any odd job you need</Text>
-        </TouchableOpacity>
+        {/* Become a Cook Button for Non-Logged-in Users */}
+        {!user && (
+          <View style={styles.authSection}>
+            <TouchableOpacity 
+              style={Components.buttonSecondary}
+              onPress={() => router.push('/tasker-register')}
+            >
+              <Ionicons name="restaurant" size={20} color={Colors.text.accent} />
+              <Text style={Typography.buttonSecondary}>Become a Cook</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
-
-      <TouchableOpacity 
-        style={styles.taskerButton}
-        onPress={checkTaskerProfile}
-      >
-        <Text style={styles.taskerButtonText}>Are you a Tasker? Click here</Text>
-      </TouchableOpacity>
     </View>
   );
 }
 
+// Local styles specific to this component
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 20, 
-    backgroundColor: "#0a0a0a" 
-  },
-  header: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    alignItems: "center", 
-    marginBottom: 10 
-  },
-  headerButtons: {
-    flexDirection: "row",
-    alignItems: "center"
-  },
-  title: { 
-    fontSize: 32, 
-    fontWeight: "bold", 
-    color: "#ffffff" 
-  },
-  settingsButton: {
-    marginRight: 15
-  },
-  settingsButtonText: {
-    fontSize: 20,
-    color: "#ffffff"
-  },
-  logoutText: { 
-    color: "#007AFF", 
-    fontSize: 16 
-  },
-  subtitle: { 
-    fontSize: 16, 
-    color: "#888", 
-    marginBottom: 30 
-  },
   cardsContainer: {
-    flex: 1,
+    gap: 16,
+    marginBottom: 40,
   },
-  card: { 
-    backgroundColor: "#1c1c1e", 
-    padding: 25, 
-    borderRadius: 16, 
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#2c2c2e"
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
   },
-  cardIcon: {
-    fontSize: 32,
-    marginBottom: 12
-  },
-  cardTitle: { 
-    fontSize: 20, 
-    fontWeight: "700", 
-    marginBottom: 8,
-    color: "#ffffff" 
-  },
-  cardDescription: { 
-    fontSize: 14, 
-    color: "#aaa",
-    lineHeight: 20 
-  },
-  taskerButton: { 
-    backgroundColor: "#007AFF", 
-    padding: 18, 
-    borderRadius: 12, 
-    alignItems: "center",
+  authSection: {
+    gap: 12,
     marginTop: 20,
-    marginBottom: 10
   },
-  taskerButtonText: { 
-    color: "white", 
-    fontSize: 16, 
-    fontWeight: "600" 
+  comingSoonText: {
+    color: Colors.text.inverse,
+    fontSize: 10,
+    fontWeight: '600',
   },
-  loadingText: {
-    color: "#ffffff",
-    fontSize: 16
-  }
 });

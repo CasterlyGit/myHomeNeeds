@@ -1,285 +1,141 @@
-import { router } from "expo-router";
-import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
-import { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { auth, db } from "../../firebase/config";
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Colors, Components, Layout, Typography } from '../../constants';
+import { auth } from '../../firebase/config';
 
 export default function Settings() {
-  const [displayName, setDisplayName] = useState("");
-  const [kitchenName, setKitchenName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [about, setAbout] = useState("");
-  const [services, setServices] = useState("");
-  const [isTasker, setIsTasker] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(auth.currentUser);
 
   useEffect(() => {
-    fetchUserProfile();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    
+    return unsubscribe;
   }, []);
 
-  const fetchUserProfile = async () => {
+  const handleLogout = async () => {
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-
-      // Check if user is a tasker
-      const taskersQuery = query(
-        collection(db, "taskers"), 
-        where("userId", "==", currentUser.uid)
-      );
-      const taskerSnapshot = await getDocs(taskersQuery);
-      
-      if (!taskerSnapshot.empty) {
-        setIsTasker(true);
-        const taskerData = taskerSnapshot.docs[0].data();
-        setDisplayName(taskerData.name || "");
-        setKitchenName(taskerData.kitchenName || taskerData.name + "'s Kitchen");
-        setPhone(taskerData.phone || "");
-        setAbout(taskerData.about || "");
-        setServices(taskerData.services || "");
-      } else {
-        setDisplayName("Customer");
-      }
+      await signOut(auth);
+      router.replace('/');
     } catch (error) {
-      Alert.alert("Error", "Failed to load profile");
-    } finally {
-      setLoading(false);
+      Alert.alert('Error', 'Failed to log out');
     }
   };
 
-  const saveProfile = async () => {
-    if (!displayName?.trim()) {
-      Alert.alert("Error", "Please enter a display name");
-      return;
-    }
-    
-    if (isTasker && !kitchenName?.trim()) {
-      Alert.alert("Error", "Please enter a kitchen name");
-      return;
-    }
-
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-
-      if (isTasker) {
-        // Update tasker profile
-        const taskersQuery = query(
-          collection(db, "taskers"), 
-          where("userId", "==", currentUser.uid)
-        );
-        const taskerSnapshot = await getDocs(taskersQuery);
-        
-        if (!taskerSnapshot.empty) {
-          const taskerDoc = taskerSnapshot.docs[0];
-          await updateDoc(doc(db, "taskers", taskerDoc.id), {
-            name: displayName,
-            kitchenName: kitchenName,
-            phone: phone,
-            about: about,
-            services: services,
-            updatedAt: new Date()
-          });
-          Alert.alert("Success", "Profile updated successfully!");
-          
-          // Wait a moment then go back
-          setTimeout(() => {
-            router.back();
-          }, 1000);
-        }
-      } else {
-        // For regular users, we'd update user profile here
-        Alert.alert("Success", "Profile updated!");
-        
-        // Wait a moment then go back
-        setTimeout(() => {
-          router.back();
-        }, 1000);
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to update profile");
-    }
-  };
-
-  const addProfilePhoto = () => {
-    Alert.alert("Profile Photo", "Photo upload feature coming soon!");
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
-      </View>
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => {
+          Alert.alert('Coming Soon', 'Account deletion feature will be added soon');
+        }},
+      ]
     );
-  }
+  };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Text style={styles.backButtonText}>← Back</Text>
-      </TouchableOpacity>
-      
-      <Text style={styles.title}>Settings</Text>
-      
-      {/* Profile Photo */}
-      <TouchableOpacity style={styles.photoSection} onPress={addProfilePhoto}>
-        <View style={styles.profilePhoto}>
-          <Text style={styles.photoPlaceholder}>👤</Text>
+    <View style={Layout.container}>
+      <Text style={Typography.title2}>Settings</Text>
+
+      {user && (
+        <View style={[Components.card, styles.userCard]}>
+          <Ionicons name="person-circle" size={48} color={Colors.text.accent} />
+          <View style={styles.userInfo}>
+            <Text style={Typography.header}>
+              {user.displayName || 'User'}
+            </Text>
+            <Text style={Typography.body2}>{user.email}</Text>
+            <Text style={Typography.caption}>
+              User since {user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'Unknown'}
+            </Text>
+          </View>
         </View>
-        <Text style={styles.photoText}>Tap to add profile photo</Text>
-      </TouchableOpacity>
-
-      <TextInput 
-        style={styles.input} 
-        placeholder="Display Name *" 
-        placeholderTextColor="#888"
-        value={displayName}
-        onChangeText={setDisplayName}
-      />
-
-      {isTasker && (
-        <>
-          <TextInput 
-            style={styles.input} 
-            placeholder="Kitchen Name *" 
-            placeholderTextColor="#888"
-            value={kitchenName}
-            onChangeText={setKitchenName}
-          />
-          <TextInput 
-            style={styles.input} 
-            placeholder="Phone Number" 
-            placeholderTextColor="#888"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
-          <TextInput 
-            style={styles.input} 
-            placeholder="Services (e.g., North Indian, Italian)" 
-            placeholderTextColor="#888"
-            value={services}
-            onChangeText={setServices}
-          />
-          <TextInput 
-            style={styles.bigInput} 
-            placeholder="About your kitchen..." 
-            placeholderTextColor="#888"
-            value={about}
-            onChangeText={setAbout}
-            multiline 
-            numberOfLines={3} 
-          />
-        </>
       )}
 
-      <TouchableOpacity style={styles.saveButton} onPress={saveProfile}>
-        <Text style={styles.saveButtonText}>Save Changes</Text>
-      </TouchableOpacity>
+      <View style={Layout.section}>
+        <Text style={Typography.header}>Account</Text>
+        
+        {user ? (
+          <>
+            <TouchableOpacity style={Components.buttonAction} onPress={() => router.push('/tasker-profile')}>
+              <Ionicons name="person" size={20} color={Colors.text.accent} />
+              <Text style={Typography.buttonSecondary}>Edit Profile</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={Components.buttonAction} onPress={handleLogout}>
+              <Ionicons name="log-out" size={20} color={Colors.status.error} />
+              <Text style={[Typography.buttonSecondary, { color: Colors.status.error }]}>Log Out</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity style={Components.buttonAction} onPress={() => router.push('/login')}>
+            <Ionicons name="log-in" size={20} color={Colors.text.accent} />
+            <Text style={Typography.buttonSecondary}>Login to Your Account</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={() => auth.signOut()}>
-        <Text style={styles.logoutButtonText}>Logout</Text>
-      </TouchableOpacity>
+      <View style={Layout.section}>
+        <Text style={Typography.header}>App</Text>
+        
+        <TouchableOpacity style={Components.buttonAction} onPress={() => Alert.alert('Coming Soon', 'Notifications settings will be added soon')}>
+          <Ionicons name="notifications" size={20} color={Colors.text.accent} />
+          <Text style={Typography.buttonSecondary}>Notifications</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={Components.buttonAction} onPress={() => Alert.alert('Coming Soon', 'Privacy settings will be added soon')}>
+          <Ionicons name="shield-checkmark" size={20} color={Colors.text.accent} />
+          <Text style={Typography.buttonSecondary}>Privacy</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={Components.buttonAction} onPress={() => Alert.alert('Coming Soon', 'Help & support will be added soon')}>
+          <Ionicons name="help-circle" size={20} color={Colors.text.accent} />
+          <Text style={Typography.buttonSecondary}>Help & Support</Text>
+        </TouchableOpacity>
+      </View>
+
+      {user && (
+        <View style={Layout.section}>
+          <Text style={Typography.header}>Danger Zone</Text>
+          
+          <TouchableOpacity style={[Components.buttonAction, styles.dangerButton]} onPress={handleDeleteAccount}>
+            <Ionicons name="trash" size={20} color={Colors.status.error} />
+            <Text style={[Typography.buttonSecondary, { color: Colors.status.error }]}>Delete Account</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <View style={styles.footer}>
+        <Text style={Typography.caption}>myHomeNeeds v1.0.0</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 20, 
-    backgroundColor: "#0a0a0a" 
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 40,
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: "bold", 
-    marginBottom: 30, 
-    textAlign: "center", 
-    marginTop: 50,
-    color: "#ffffff"
+  userInfo: {
+    flex: 1,
   },
-  backButton: { 
-    position: "absolute", 
-    top: 50, 
-    left: 20 
+  dangerButton: {
+    borderColor: Colors.status.error,
   },
-  backButtonText: { 
-    color: "#007AFF", 
-    fontSize: 16 
+  footer: {
+    alignItems: 'center',
+    marginTop: 30,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.primary,
   },
-  photoSection: {
-    alignItems: "center",
-    marginBottom: 30
-  },
-  profilePhoto: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#1c1c1e",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#007AFF",
-    marginBottom: 10
-  },
-  photoPlaceholder: {
-    fontSize: 40
-  },
-  photoText: {
-    color: "#007AFF",
-    fontSize: 14,
-    fontWeight: "600"
-  },
-  input: { 
-    borderWidth: 1, 
-    borderColor: "#2c2c2e", 
-    padding: 16, 
-    borderRadius: 12, 
-    marginBottom: 16,
-    backgroundColor: "#1c1c1e",
-    color: "#ffffff",
-    fontSize: 16
-  },
-  bigInput: { 
-    borderWidth: 1, 
-    borderColor: "#2c2c2e", 
-    padding: 16, 
-    borderRadius: 12, 
-    marginBottom: 16, 
-    height: 100,
-    backgroundColor: "#1c1c1e",
-    color: "#ffffff",
-    fontSize: 16,
-    textAlignVertical: 'top'
-  },
-  saveButton: { 
-    backgroundColor: "#007AFF", 
-    padding: 16, 
-    borderRadius: 12, 
-    alignItems: "center",
-    marginBottom: 12
-  },
-  saveButtonText: { 
-    color: "white", 
-    fontSize: 16, 
-    fontWeight: "600" 
-  },
-  logoutButton: { 
-    backgroundColor: "transparent", 
-    padding: 16, 
-    borderRadius: 12, 
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#FF3B30"
-  },
-  logoutButtonText: { 
-    color: "#FF3B30", 
-    fontSize: 16, 
-    fontWeight: "600" 
-  },
-  loadingText: {
-    color: "#ffffff",
-    fontSize: 16,
-    textAlign: "center"
-  }
 });
