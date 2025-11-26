@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
-import { db, auth } from "../../firebase/config";
-import { collection, addDoc } from "firebase/firestore";
+import { addDoc, collection } from "firebase/firestore";
+import { useState } from "react";
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { auth, db } from "../../firebase/config";
 
 export default function MealListing() {
   const [mealName, setMealName] = useState("");
@@ -11,6 +11,21 @@ export default function MealListing() {
   const [cuisine, setCuisine] = useState("");
 
   const addMeal = async () => {
+    if (!mealName?.trim()) {
+      Alert.alert("Error", "Please enter a meal name");
+      return;
+    }
+    
+    if (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      Alert.alert("Error", "Please enter a valid price");
+      return;
+    }
+    
+    if (!cuisine?.trim()) {
+      Alert.alert("Error", "Please enter a cuisine type");
+      return;
+    }
+    
     if (!mealName || !price || !cuisine) {
       Alert.alert("Error", "Please fill in meal name, price, and cuisine");
       return;

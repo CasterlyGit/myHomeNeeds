@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
-import { auth } from "../../firebase/config";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { router } from "expo-router";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { useState } from "react";
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { auth } from "../../firebase/config";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -10,6 +10,20 @@ export default function LoginScreen() {
   const [isLogin, setIsLogin] = useState(true);
 
   const handleAuth = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+    
+    if (!email.includes('@')) {
+      Alert.alert("Error", "Please enter a valid email");
+      return;
+    }
+    
+    if (password.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters");
+      return;
+    }
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);

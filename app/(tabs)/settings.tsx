@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from "react-native";
 import { router } from "expo-router";
-import { db, auth } from "../../firebase/config";
-import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { auth, db } from "../../firebase/config";
 
 export default function Settings() {
   const [displayName, setDisplayName] = useState("");
@@ -48,6 +48,16 @@ export default function Settings() {
   };
 
   const saveProfile = async () => {
+    if (!displayName?.trim()) {
+      Alert.alert("Error", "Please enter a display name");
+      return;
+    }
+    
+    if (isTasker && !kitchenName?.trim()) {
+      Alert.alert("Error", "Please enter a kitchen name");
+      return;
+    }
+
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) return;
@@ -71,10 +81,20 @@ export default function Settings() {
             updatedAt: new Date()
           });
           Alert.alert("Success", "Profile updated successfully!");
+          
+          // Wait a moment then go back
+          setTimeout(() => {
+            router.back();
+          }, 1000);
         }
       } else {
         // For regular users, we'd update user profile here
         Alert.alert("Success", "Profile updated!");
+        
+        // Wait a moment then go back
+        setTimeout(() => {
+          router.back();
+        }, 1000);
       }
     } catch (error) {
       Alert.alert("Error", "Failed to update profile");

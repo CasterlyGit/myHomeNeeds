@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { router } from "expo-router";
-import { db, auth } from "../../firebase/config";
-import { collection, addDoc } from "firebase/firestore";
+import { addDoc, collection } from "firebase/firestore";
+import { useState } from "react";
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { auth, db } from "../../firebase/config";
 
 export default function TaskerRegister() {
   const [name, setName] = useState("");
@@ -11,8 +11,18 @@ export default function TaskerRegister() {
   const [about, setAbout] = useState("");
 
   const registerAsTasker = async () => {
-    if (!name || !phone || !services) {
-      Alert.alert("Error", "Please fill in all required fields");
+    if (!name?.trim()) {
+      Alert.alert("Error", "Please enter your name");
+      return;
+    }
+    
+    if (!phone?.trim()) {
+      Alert.alert("Error", "Please enter your phone number");
+      return;
+    }
+    
+    if (!services?.trim()) {
+      Alert.alert("Error", "Please describe what you cook");
       return;
     }
 
@@ -46,12 +56,14 @@ export default function TaskerRegister() {
       <TextInput 
         style={styles.input} 
         placeholder="Your Name *" 
+        placeholderTextColor="#888"
         value={name}
         onChangeText={setName}
       />
       <TextInput 
         style={styles.input} 
         placeholder="Phone Number *" 
+        placeholderTextColor="#888"
         value={phone}
         onChangeText={setPhone}
         keyboardType="phone-pad"
@@ -59,12 +71,14 @@ export default function TaskerRegister() {
       <TextInput 
         style={styles.input} 
         placeholder="What do you cook? *" 
+        placeholderTextColor="#888"
         value={services}
         onChangeText={setServices}
       />
       <TextInput 
         style={styles.bigInput} 
         placeholder="Tell us about your cooking style..." 
+        placeholderTextColor="#888"
         value={about}
         onChangeText={setAbout}
         multiline 
@@ -79,13 +93,65 @@ export default function TaskerRegister() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 28, fontWeight: "bold", marginBottom: 10, textAlign: "center", marginTop: 50 },
-  subtitle: { fontSize: 16, color: "#666", marginBottom: 30, textAlign: "center" },
-  input: { borderWidth: 1, borderColor: "#ddd", padding: 15, borderRadius: 8, marginBottom: 15 },
-  bigInput: { borderWidth: 1, borderColor: "#ddd", padding: 15, borderRadius: 8, marginBottom: 15, height: 100 },
-  button: { backgroundColor: "#007AFF", padding: 15, borderRadius: 8, alignItems: "center" },
-  buttonText: { color: "white", fontSize: 16, fontWeight: "600" },
-  backButton: { position: "absolute", top: 50, left: 20 },
-  backButtonText: { color: "#007AFF", fontSize: 16 }
+  container: { 
+    flex: 1, 
+    padding: 20, 
+    backgroundColor: "#0a0a0a" 
+  },
+  title: { 
+    fontSize: 28, 
+    fontWeight: "bold", 
+    marginBottom: 10, 
+    textAlign: "center", 
+    marginTop: 50,
+    color: "#ffffff"
+  },
+  subtitle: { 
+    fontSize: 16, 
+    color: "#888", 
+    marginBottom: 30, 
+    textAlign: "center" 
+  },
+  input: { 
+    borderWidth: 1, 
+    borderColor: "#2c2c2e", 
+    padding: 15, 
+    borderRadius: 8, 
+    marginBottom: 15,
+    backgroundColor: "#1c1c1e",
+    color: "#ffffff",
+    fontSize: 16
+  },
+  bigInput: { 
+    borderWidth: 1, 
+    borderColor: "#2c2c2e", 
+    padding: 15, 
+    borderRadius: 8, 
+    marginBottom: 15, 
+    height: 100,
+    backgroundColor: "#1c1c1e",
+    color: "#ffffff",
+    fontSize: 16,
+    textAlignVertical: 'top'
+  },
+  button: { 
+    backgroundColor: "#007AFF", 
+    padding: 15, 
+    borderRadius: 8, 
+    alignItems: "center" 
+  },
+  buttonText: { 
+    color: "white", 
+    fontSize: 16, 
+    fontWeight: "600" 
+  },
+  backButton: { 
+    position: "absolute", 
+    top: 50, 
+    left: 20 
+  },
+  backButtonText: { 
+    color: "#007AFF", 
+    fontSize: 16 
+  }
 });

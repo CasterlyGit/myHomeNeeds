@@ -1,24 +1,17 @@
-import { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
-import { db, auth } from "../../firebase/config";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { db } from "../../firebase/config";
 
 export default function UserOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      setLoading(false);
-      return;
-    }
-
-    // Real-time listener for user's orders
+    // Show all orders (remove customer filter)
     const ordersQuery = query(
-      collection(db, "orders"), 
-      where("customerName", "==", "Customer"), // In real app, use actual user ID
+      collection(db, "orders"),
       orderBy("createdAt", "desc")
     );
     

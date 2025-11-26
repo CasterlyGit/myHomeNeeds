@@ -1,8 +1,8 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { auth, db } from "../../firebase/config";
 
 export default function HomeScreen() {
@@ -11,6 +11,10 @@ export default function HomeScreen() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      // Auto-redirect if no user
+      if (!user) {
+        router.replace("/login");
+      }
     });
     return unsubscribe;
   }, []);
