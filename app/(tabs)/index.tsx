@@ -1,9 +1,9 @@
 import { router } from "expo-router";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, getDocs } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { auth, db } from "../../firebase/config";
+import { auth } from "../../firebase/config";
+import BottomDock from "./BottomDock";
 
 export default function HomeScreen() {
   const [user, setUser] = useState(null);
@@ -19,32 +19,6 @@ export default function HomeScreen() {
     return unsubscribe;
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.replace("/login");
-    } catch (error) {
-      alert("Error signing out");
-    }
-  };
-
-  const checkTaskerProfile = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "taskers"));
-      const userTaskerProfile = querySnapshot.docs.find(
-        doc => doc.data().userId === auth.currentUser?.uid
-      );
-      
-      if (userTaskerProfile) {
-        router.push("/tasker-services");
-      } else {
-        router.push("/tasker-register");
-      }
-    } catch (error) {
-      alert("Error checking profile");
-    }
-  };
-
   // If user is not logged in, redirect to login
   if (!user) {
     return (
@@ -58,19 +32,14 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>myHomeNeeds</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity onPress={() => router.push("/settings")} style={styles.settingsButton}>
-            <Text style={styles.settingsButtonText}>⚙️</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleLogout}>
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
       </View>
       
       <Text style={styles.subtitle}>Get things done, the easy way</Text>
       
-      <ScrollView style={styles.cardsContainer}>
+      <ScrollView 
+        style={styles.cardsContainer}
+        contentContainerStyle={styles.cardsContentContainer}
+      >
         <TouchableOpacity 
           style={styles.card}
           onPress={() => router.push("/meals-browse")}
@@ -108,12 +77,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      <TouchableOpacity 
-        style={styles.taskerButton}
-        onPress={checkTaskerProfile}
-      >
-        <Text style={styles.taskerButtonText}>Are you a Tasker? Click here</Text>
-      </TouchableOpacity>
+      <BottomDock />
     </View>
   );
 }
@@ -130,25 +94,10 @@ const styles = StyleSheet.create({
     alignItems: "center", 
     marginBottom: 10 
   },
-  headerButtons: {
-    flexDirection: "row",
-    alignItems: "center"
-  },
   title: { 
     fontSize: 32, 
     fontWeight: "bold", 
     color: "#ffffff" 
-  },
-  settingsButton: {
-    marginRight: 15
-  },
-  settingsButtonText: {
-    fontSize: 20,
-    color: "#ffffff"
-  },
-  logoutText: { 
-    color: "#007AFF", 
-    fontSize: 16 
   },
   subtitle: { 
     fontSize: 16, 
@@ -157,6 +106,9 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     flex: 1,
+  },
+  cardsContentContainer: {
+    paddingBottom: 120 // Extra padding for dock
   },
   card: { 
     backgroundColor: "#1c1c1e", 
@@ -180,19 +132,6 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     color: "#aaa",
     lineHeight: 20 
-  },
-  taskerButton: { 
-    backgroundColor: "#007AFF", 
-    padding: 18, 
-    borderRadius: 12, 
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 10
-  },
-  taskerButtonText: { 
-    color: "white", 
-    fontSize: 16, 
-    fontWeight: "600" 
   },
   loadingText: {
     color: "#ffffff",

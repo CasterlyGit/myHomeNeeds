@@ -1,7 +1,8 @@
 import { router } from "expo-router";
+import { signOut } from "firebase/auth";
 import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { auth, db } from "../../firebase/config";
 
 export default function Settings() {
@@ -38,7 +39,7 @@ export default function Settings() {
         setAbout(taskerData.about || "");
         setServices(taskerData.services || "");
       } else {
-        setDisplayName("Customer");
+        setDisplayName(currentUser.email?.split('@')[0] || "Customer");
       }
     } catch (error) {
       Alert.alert("Error", "Failed to load profile");
@@ -81,24 +82,36 @@ export default function Settings() {
             updatedAt: new Date()
           });
           Alert.alert("Success", "Profile updated successfully!");
-          
-          // Wait a moment then go back
-          setTimeout(() => {
-            router.back();
-          }, 1000);
         }
       } else {
         // For regular users, we'd update user profile here
         Alert.alert("Success", "Profile updated!");
-        
-        // Wait a moment then go back
-        setTimeout(() => {
-          router.back();
-        }, 1000);
       }
     } catch (error) {
       Alert.alert("Error", "Failed to update profile");
     }
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Logout", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              router.replace("/login");
+            } catch (error) {
+              Alert.alert("Error", "Failed to logout");
+            }
+          }
+        }
+      ]
+    );
   };
 
   const addProfilePhoto = () => {
@@ -114,12 +127,12 @@ export default function Settings() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backButtonText}>← Back</Text>
       </TouchableOpacity>
       
-      <Text style={styles.title}>Settings</Text>
+      <Text style={styles.title}>Account Settings</Text>
       
       {/* Profile Photo */}
       <TouchableOpacity style={styles.photoSection} onPress={addProfilePhoto}>
@@ -128,6 +141,12 @@ export default function Settings() {
         </View>
         <Text style={styles.photoText}>Tap to add profile photo</Text>
       </TouchableOpacity>
+
+      {/* User Email */}
+      <View style={styles.emailContainer}>
+        <Text style={styles.emailLabel}>Email</Text>
+        <Text style={styles.emailText}>{auth.currentUser?.email}</Text>
+      </View>
 
       <TextInput 
         style={styles.input} 
@@ -139,6 +158,10 @@ export default function Settings() {
 
       {isTasker && (
         <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Kitchen Details</Text>
+          </View>
+          
           <TextInput 
             style={styles.input} 
             placeholder="Kitchen Name *" 
@@ -174,21 +197,26 @@ export default function Settings() {
       )}
 
       <TouchableOpacity style={styles.saveButton} onPress={saveProfile}>
-        <Text style={styles.saveButtonText}>Save Changes</Text>
+        <Text style={styles.saveButtonText}>💾 Save Changes</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={() => auth.signOut()}>
-        <Text style={styles.logoutButtonText}>Logout</Text>
+      <View style={styles.divider} />
+
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutButtonText}>🚪 Logout</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    padding: 20, 
     backgroundColor: "#0a0a0a" 
+  },
+  contentContainer: {
+    padding: 20,
+    paddingBottom: 40
   },
   title: { 
     fontSize: 28, 
@@ -201,7 +229,8 @@ const styles = StyleSheet.create({
   backButton: { 
     position: "absolute", 
     top: 50, 
-    left: 20 
+    left: 20,
+    zIndex: 10
   },
   backButtonText: { 
     color: "#007AFF", 
@@ -230,6 +259,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600"
   },
+  emailContainer: {
+    backgroundColor: "#1c1c1e",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#2c2c2e"
+  },
+  emailLabel: {
+    color: "#888",
+    fontSize: 12,
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5
+  },
+  emailText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "500"
+  },
+  sectionHeader: {
+    marginTop: 10,
+    marginBottom: 15
+  },
+  sectionTitle: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "700"
+  },
   input: { 
     borderWidth: 1, 
     borderColor: "#2c2c2e", 
@@ -257,12 +315,17 @@ const styles = StyleSheet.create({
     padding: 16, 
     borderRadius: 12, 
     alignItems: "center",
-    marginBottom: 12
+    marginTop: 10
   },
   saveButtonText: { 
     color: "white", 
     fontSize: 16, 
     fontWeight: "600" 
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#2c2c2e",
+    marginVertical: 30
   },
   logoutButton: { 
     backgroundColor: "transparent", 
@@ -280,6 +343,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: "#ffffff",
     fontSize: 16,
-    textAlign: "center"
+    textAlign: "center",
+    marginTop: 50
   }
 });
