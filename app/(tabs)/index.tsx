@@ -1,98 +1,177 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { router } from "expo-router";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { collection, getDocs } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { auth, db } from "../../firebase/config";
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [user, setUser] = useState(null);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.replace("/login");
+    } catch (error) {
+      alert("Error signing out");
+    }
+  };
+
+  const checkTaskerProfile = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "taskers"));
+      const userTaskerProfile = querySnapshot.docs.find(
+        doc => doc.data().userId === auth.currentUser?.uid
+      );
+      
+      if (userTaskerProfile) {
+        router.push("/tasker-dashboard");
+      } else {
+        router.push("/tasker-register");
+      }
+    } catch (error) {
+      alert("Error checking profile");
+    }
+  };
+
+  // If user is not logged in, redirect to login
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>myHomeNeeds</Text>
+        <TouchableOpacity onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+      
+      <Text style={styles.subtitle}>Get things done, the easy way</Text>
+      
+      <ScrollView style={styles.cardsContainer}>
+        <TouchableOpacity 
+          style={styles.card}
+          onPress={() => router.push("/meals-browse")}
+        >
+          <Text style={styles.cardIcon}>🍛</Text>
+          <Text style={styles.cardTitle}>Home Cooked Meals</Text>
+          <Text style={styles.cardDescription}>Fresh meals from local cooks</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.card}>
+          <Text style={styles.cardIcon}>🐕</Text>
+          <Text style={styles.cardTitle}>Pet Sitting</Text>
+          <Text style={styles.cardDescription}>Trusted pet care</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.card}>
+          <Text style={styles.cardIcon}>🧹</Text>
+          <Text style={styles.cardTitle}>Cleaning Service</Text>
+          <Text style={styles.cardDescription}>Spotless cleaning</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.card}>
+          <Text style={styles.cardIcon}>📋</Text>
+          <Text style={styles.cardTitle}>Other Tasks</Text>
+          <Text style={styles.cardDescription}>Any odd job you need</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <TouchableOpacity 
+        style={styles.taskerButton}
+        onPress={() => router.push("/tasker-services")}
+      >
+        <Text style={styles.taskerButtonText}>Are you a Tasker? Click here</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { 
+    flex: 1, 
+    padding: 20, 
+    backgroundColor: "#0a0a0a" 
   },
-  stepContainer: {
-    gap: 8,
+  header: { 
+    flexDirection: "row", 
+    justifyContent: "space-between", 
+    alignItems: "center", 
+    marginBottom: 10 
+  },
+  title: { 
+    fontSize: 32, 
+    fontWeight: "bold", 
+    color: "#ffffff" 
+  },
+  logoutText: { 
+    color: "#007AFF", 
+    fontSize: 16 
+  },
+  subtitle: { 
+    fontSize: 16, 
+    color: "#888", 
+    marginBottom: 30 
+  },
+  cardsContainer: {
+    flex: 1,
+  },
+  card: { 
+    backgroundColor: "#1c1c1e", 
+    padding: 25, 
+    borderRadius: 16, 
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#2c2c2e",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8
+  },
+  cardIcon: {
+    fontSize: 32,
+    marginBottom: 12
+  },
+  cardTitle: { 
+    fontSize: 20, 
+    fontWeight: "700", 
     marginBottom: 8,
+    color: "#ffffff" 
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  cardDescription: { 
+    fontSize: 14, 
+    color: "#aaa",
+    lineHeight: 20 
   },
+  taskerButton: { 
+    backgroundColor: "#007AFF", 
+    padding: 18, 
+    borderRadius: 12, 
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 10
+  },
+  taskerButtonText: { 
+    color: "white", 
+    fontSize: 16, 
+    fontWeight: "600" 
+  },
+  loadingText: {
+    color: "#ffffff",
+    fontSize: 16
+  }
 });
