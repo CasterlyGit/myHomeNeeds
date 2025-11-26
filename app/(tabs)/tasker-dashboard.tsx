@@ -2,31 +2,46 @@ import { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { db, auth } from "../../firebase/config";
-import { collection, getDocs, query, where } from "firebase/firestore";
-
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 
 export default function TaskerDashboard() {
   const [meals, setMeals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [kitchenName, setKitchenName] = useState("My Kitchen");
 
   useEffect(() => {
-    fetchMyMeals();
+    fetchMyData();
   }, []);
 
-  const fetchMyMeals = async () => {
+  const fetchMyData = async () => {
     try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      // Fetch kitchen name from tasker profile
+      const taskersQuery = query(
+        collection(db, "taskers"), 
+        where("userId", "==", currentUser.uid)
+      );
+      const taskerSnapshot = await getDocs(taskersQuery);
+      if (!taskerSnapshot.empty) {
+        const taskerData = taskerSnapshot.docs[0].data();
+        setKitchenName(taskerData.kitchenName || taskerData.name + "'s Kitchen");
+      }
+
+      // Fetch meals
       const mealsQuery = query(
         collection(db, "meals"), 
-        where("cookId", "==", auth.currentUser?.uid)
+        where("cookId", "==", currentUser.uid)
       );
-      const querySnapshot = await getDocs(mealsQuery);
+      const mealsSnapshot = await getDocs(mealsQuery);
       const mealsData = [];
-      querySnapshot.forEach((doc) => {
+      mealsSnapshot.forEach((doc) => {
         mealsData.push({ id: doc.id, ...doc.data() });
       });
       setMeals(mealsData);
     } catch (error) {
-      alert("Error loading your meals");
+      alert("Error loading your data");
     } finally {
       setLoading(false);
     }
@@ -38,7 +53,7 @@ export default function TaskerDashboard() {
         <Text style={styles.backButtonText}>← Back</Text>
       </TouchableOpacity>
       
-      <Text style={styles.title}>My Kitchen</Text>
+      <Text style={styles.title}>{kitchenName}</Text>
       <Text style={styles.subtitle}>Manage your home-cooked meals</Text>
 
       <View style={styles.buttonRow}>
@@ -56,6 +71,13 @@ export default function TaskerDashboard() {
           <Text style={styles.ordersButtonText}>📦 Orders</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity 
+        style={styles.settingsButton}
+        onPress={() => router.push("/settings")}
+      >
+        <Text style={styles.settingsButtonText}>⚙️ Edit Kitchen Settings</Text>
+      </TouchableOpacity>
 
       <Text style={styles.sectionTitle}>My Meals ({meals.length})</Text>
       
@@ -128,7 +150,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 20
+    marginBottom: 15
   },
   addButton: { 
     backgroundColor: "#007AFF", 
@@ -155,6 +177,20 @@ const styles = StyleSheet.create({
     color: "white", 
     fontSize: 16, 
     fontWeight: "600" 
+  },
+  settingsButton: {
+    backgroundColor: "#1c1c1e",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#2c2c2e",
+    marginBottom: 20
+  },
+  settingsButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "600"
   },
   mealsList: { 
     flex: 1 

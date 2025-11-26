@@ -18,7 +18,7 @@ export default function MealEdit() {
 
   const fetchMeal = async () => {
     try {
-      const docRef = doc(db, "meals", id);
+      const docRef = doc(db, "meals", id as string);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const mealData = docSnap.data();
@@ -41,7 +41,7 @@ export default function MealEdit() {
     }
 
     try {
-      const docRef = doc(db, "meals", id);
+      const docRef = doc(db, "meals", id as string);
       await updateDoc(docRef, {
         mealName,
         description,
@@ -67,7 +67,7 @@ export default function MealEdit() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, "meals", id));
+              await deleteDoc(doc(db, "meals", id as string));
               Alert.alert("Success", "Meal deleted!");
               router.back();
             } catch (error) {
@@ -89,7 +89,7 @@ export default function MealEdit() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => router.push("/")} style={styles.backButton}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Text style={styles.backButtonText}>← Back</Text>
       </TouchableOpacity>
       

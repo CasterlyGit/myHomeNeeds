@@ -2,23 +2,46 @@ import { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { db } from "../../firebase/config";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 export default function MealsBrowse() {
   const [cooks, setCooks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchCooks();
+    fetchCooksWithMeals();
   }, []);
 
-  const fetchCooks = async () => {
+  const fetchCooksWithMeals = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "taskers"));
+      // Get all taskers
+      const taskersSnapshot = await getDocs(collection(db, "taskers"));
       const cooksData = [];
-      querySnapshot.forEach((doc) => {
-        cooksData.push({ id: doc.id, ...doc.data() });
-      });
+      
+      // Check each tasker if they have meals
+      for (const doc of taskersSnapshot.docs) {
+        const taskerData = doc.data();
+        
+        // Try both userId and id fields
+        const cookId = taskerData.userId || taskerData.id || doc.id;
+        
+        // Check if tasker has meals
+        const mealsQuery = query(
+          collection(db, "meals"), 
+          where("cookId", "==", cookId)
+        );
+        const mealsSnapshot = await getDocs(mealsQuery);
+        
+        // Only include cooks who have at least one meal
+        if (mealsSnapshot.size > 0) {
+          cooksData.push({ 
+            id: doc.id, 
+            ...taskerData,
+            mealCount: mealsSnapshot.size
+          });
+        }
+      }
+      
       setCooks(cooksData);
     } catch (error) {
       alert("Error loading cooks");
@@ -58,9 +81,15 @@ export default function MealsBrowse() {
               style={styles.cookCard}
               onPress={() => router.push(`/cook-menu?id=${cook.id}`)}
             >
-              <Text style={styles.cookName}>{cook.name}</Text>
+              <View style={styles.cookHeader}>
+                <Text style={styles.cookName}>{cook.name}</Text>
+                <View style={styles.openBadge}>
+                  <Text style={styles.openText}>🟢 OPEN</Text>
+                </View>
+              </View>
               <Text style={styles.cookServices}>{cook.services}</Text>
               <Text style={styles.cookAbout}>{cook.about}</Text>
+              <Text style={styles.mealCount}>{cook.mealCount} meals available</Text>
               <Text style={styles.viewMenuText}>View Menu →</Text>
             </TouchableOpacity>
           ))}
@@ -106,18 +135,30 @@ const styles = StyleSheet.create({
     borderRadius: 16, 
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#2c2c2e",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8
+    borderColor: "#2c2c2e"
+  },
+  cookHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 8
   },
   cookName: { 
     fontSize: 20, 
     fontWeight: "700", 
-    marginBottom: 8,
-    color: "#ffffff" 
+    color: "#ffffff",
+    flex: 1
+  },
+  openBadge: {
+    backgroundColor: "#34C759",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6
+  },
+  openText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600"
   },
   cookServices: { 
     fontSize: 16, 
@@ -128,8 +169,14 @@ const styles = StyleSheet.create({
   cookAbout: { 
     fontSize: 14, 
     color: "#888", 
-    marginBottom: 12,
+    marginBottom: 8,
     lineHeight: 20
+  },
+  mealCount: {
+    fontSize: 14,
+    color: "#007AFF",
+    fontWeight: "600",
+    marginBottom: 8
   },
   viewMenuText: { 
     fontSize: 14, 

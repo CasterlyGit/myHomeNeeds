@@ -1,8 +1,8 @@
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { auth, db } from "../../firebase/config";
 
 export default function HomeScreen() {
@@ -32,7 +32,7 @@ export default function HomeScreen() {
       );
       
       if (userTaskerProfile) {
-        router.push("/tasker-dashboard");
+        router.push("/tasker-services");
       } else {
         router.push("/tasker-register");
       }
@@ -54,9 +54,14 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>myHomeNeeds</Text>
-        <TouchableOpacity onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity onPress={() => router.push("/settings")} style={styles.settingsButton}>
+            <Text style={styles.settingsButtonText}>⚙️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout}>
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       
       <Text style={styles.subtitle}>Get things done, the easy way</Text>
@@ -69,6 +74,15 @@ export default function HomeScreen() {
           <Text style={styles.cardIcon}>🍛</Text>
           <Text style={styles.cardTitle}>Home Cooked Meals</Text>
           <Text style={styles.cardDescription}>Fresh meals from local cooks</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.card}
+          onPress={() => router.push("/user-orders")}
+        >
+          <Text style={styles.cardIcon}>📦</Text>
+          <Text style={styles.cardTitle}>My Orders</Text>
+          <Text style={styles.cardDescription}>Track your food orders</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.card}>
@@ -92,7 +106,7 @@ export default function HomeScreen() {
 
       <TouchableOpacity 
         style={styles.taskerButton}
-        onPress={() => router.push("/tasker-services")}
+        onPress={checkTaskerProfile}
       >
         <Text style={styles.taskerButtonText}>Are you a Tasker? Click here</Text>
       </TouchableOpacity>
@@ -112,10 +126,21 @@ const styles = StyleSheet.create({
     alignItems: "center", 
     marginBottom: 10 
   },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
   title: { 
     fontSize: 32, 
     fontWeight: "bold", 
     color: "#ffffff" 
+  },
+  settingsButton: {
+    marginRight: 15
+  },
+  settingsButtonText: {
+    fontSize: 20,
+    color: "#ffffff"
   },
   logoutText: { 
     color: "#007AFF", 
@@ -135,12 +160,7 @@ const styles = StyleSheet.create({
     borderRadius: 16, 
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#2c2c2e",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8
+    borderColor: "#2c2c2e"
   },
   cardIcon: {
     fontSize: 32,

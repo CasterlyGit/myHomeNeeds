@@ -13,6 +13,8 @@ export default function TabLayout() {
       <Stack.Screen name="tasker-services" />
       <Stack.Screen name="meal-edit" />
       <Stack.Screen name="tasker-orders" />
+      <Stack.Screen name="user-orders" />
+      <Stack.Screen name="settings" />
     </Stack>
   );
 }

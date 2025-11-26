@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { db, auth } from "../../firebase/config";
-import { collection, query, where, doc, updateDoc, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 
-export default function TaskerOrders() {
+export default function UserOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -15,10 +15,11 @@ export default function TaskerOrders() {
       return;
     }
 
+    // Real-time listener for user's orders
     const ordersQuery = query(
       collection(db, "orders"), 
-      where("cookId", "==", currentUser.uid),
-      orderBy("createdAt", "desc") // NEW: Sort by most recent first
+      where("customerName", "==", "Customer"), // In real app, use actual user ID
+      orderBy("createdAt", "desc")
     );
     
     const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
@@ -33,37 +34,41 @@ export default function TaskerOrders() {
     return unsubscribe;
   }, []);
 
-  const updateOrderStatus = async (orderId, newStatus) => {
-    try {
-      await updateDoc(doc(db, "orders", orderId), {
-        status: newStatus,
-        updatedAt: new Date()
-      });
-      Alert.alert("Success", `Order ${newStatus}!`);
-    } catch (error) {
-      Alert.alert("Error", "Failed to update order");
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending': return '#FF9500';
+      case 'accepted': return '#007AFF';
+      case 'completed': return '#34C759';
+      case 'declined': return '#FF3B30';
+      default: return '#666';
     }
   };
 
-  const getOrderTotal = (order) => {
-    return order.total || Object.values(order.items).reduce((total, item) => total + (item.price * item.quantity), 0);
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'pending': return '🟡 Waiting for cook to accept';
+      case 'accepted': return '🔵 Cook is preparing your order';
+      case 'completed': return '🟢 Order completed!';
+      case 'declined': return '🔴 Order declined by cook';
+      default: return status;
+    }
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => router.push("/tasker-dashboard")} style={styles.backButton}>
+      <TouchableOpacity onPress={() => router.push("/")} style={styles.backButton}>
         <Text style={styles.backButtonText}>← Back</Text>
       </TouchableOpacity>
       
-      <Text style={styles.title}>New Orders</Text>
-      <Text style={styles.subtitle}>Manage incoming food orders</Text>
+      <Text style={styles.title}>My Orders</Text>
+      <Text style={styles.subtitle}>Track your food orders</Text>
 
       {loading ? (
         <ActivityIndicator size="large" color="#007AFF" />
       ) : orders.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>No orders yet</Text>
-          <Text style={styles.emptySubtext}>Orders will appear here when customers place them</Text>
+          <Text style={styles.emptySubtext}>Your orders will appear here</Text>
         </View>
       ) : (
         <ScrollView style={styles.ordersList}>
@@ -71,19 +76,13 @@ export default function TaskerOrders() {
             <View key={order.id} style={styles.orderCard}>
               <View style={styles.orderHeader}>
                 <Text style={styles.orderNumber}>Order #{order.id.slice(-6)}</Text>
-                <View style={[styles.statusBadge, 
-                  order.status === 'pending' && styles.statusPending,
-                  order.status === 'accepted' && styles.statusAccepted,
-                  order.status === 'completed' && styles.statusCompleted
-                ]}>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) }]}>
                   <Text style={styles.statusText}>{order.status}</Text>
                 </View>
               </View>
               
-              <Text style={styles.customerInfo}>Customer: {order.customerName}</Text>
-              <Text style={styles.orderTime}>
-                {order.createdAt?.toDate().toLocaleString()}
-              </Text>
+              <Text style={styles.cookInfo}>From: {order.cookName}</Text>
+              <Text style={styles.statusDescription}>{getStatusText(order.status)}</Text>
               
               <View style={styles.orderItems}>
                 {Object.values(order.items).map((item, index) => (
@@ -95,34 +94,12 @@ export default function TaskerOrders() {
               </View>
               
               <View style={styles.orderTotal}>
-                <Text style={styles.totalText}>Total: ${getOrderTotal(order).toFixed(2)}</Text>
+                <Text style={styles.totalText}>Total: ${order.total?.toFixed(2)}</Text>
               </View>
               
-              {order.status === 'pending' && (
-                <View style={styles.orderActions}>
-                  <TouchableOpacity 
-                    style={styles.acceptButton}
-                    onPress={() => updateOrderStatus(order.id, 'accepted')}
-                  >
-                    <Text style={styles.acceptButtonText}>Accept Order</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.declineButton}
-                    onPress={() => updateOrderStatus(order.id, 'declined')}
-                  >
-                    <Text style={styles.declineButtonText}>Decline</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              
-              {order.status === 'accepted' && (
-                <TouchableOpacity 
-                  style={styles.completeButton}
-                  onPress={() => updateOrderStatus(order.id, 'completed')}
-                >
-                  <Text style={styles.completeButtonText}>Mark as Completed</Text>
-                </TouchableOpacity>
-              )}
+              <Text style={styles.orderTime}>
+                Ordered: {order.createdAt?.toDate().toLocaleString()}
+              </Text>
             </View>
           ))}
         </ScrollView>
@@ -185,29 +162,21 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 12
   },
-  statusPending: {
-    backgroundColor: "#FF9500"
-  },
-  statusAccepted: {
-    backgroundColor: "#007AFF"
-  },
-  statusCompleted: {
-    backgroundColor: "#34C759"
-  },
   statusText: {
     color: "white",
     fontSize: 12,
     fontWeight: "600"
   },
-  customerInfo: {
+  cookInfo: {
     fontSize: 14,
     color: "#aaa",
-    marginBottom: 4
+    marginBottom: 8
   },
-  orderTime: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 15
+  statusDescription: {
+    fontSize: 14,
+    color: "#ccc",
+    marginBottom: 15,
+    fontStyle: 'italic'
   },
   orderItems: {
     marginBottom: 15
@@ -234,7 +203,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#2c2c2e",
     paddingTop: 12,
-    marginBottom: 15
+    marginBottom: 12
   },
   totalText: {
     fontSize: 18,
@@ -242,46 +211,10 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     textAlign: "center"
   },
-  orderActions: {
-    flexDirection: "row",
-    justifyContent: "space-between"
-  },
-  acceptButton: {
-    backgroundColor: "#34C759",
-    padding: 12,
-    borderRadius: 8,
-    flex: 1,
-    marginRight: 8,
-    alignItems: "center"
-  },
-  acceptButtonText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600"
-  },
-  declineButton: {
-    backgroundColor: "#FF3B30",
-    padding: 12,
-    borderRadius: 8,
-    flex: 1,
-    marginLeft: 8,
-    alignItems: "center"
-  },
-  declineButtonText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600"
-  },
-  completeButton: {
-    backgroundColor: "#007AFF",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center"
-  },
-  completeButtonText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600"
+  orderTime: {
+    fontSize: 12,
+    color: "#666",
+    textAlign: "center"
   },
   emptyState: { 
     alignItems: "center", 
