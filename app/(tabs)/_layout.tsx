@@ -5,6 +5,7 @@ export default function TabLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
+      <Stack.Screen name="services" />
       <Stack.Screen name="meals-browse" />
       <Stack.Screen name="cook-menu" />
       <Stack.Screen name="tasker-register" />

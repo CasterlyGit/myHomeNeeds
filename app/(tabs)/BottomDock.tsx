@@ -24,6 +24,18 @@ export default function BottomDock() {
   return (
     <View style={styles.dockContainer}>
       <View style={styles.dock}>
+        {/* Home Icon */}
+        <TouchableOpacity 
+          style={styles.dockButton}
+          onPress={() => router.push("/services")}
+          activeOpacity={0.7}
+        >
+          <View style={styles.iconContainer}>
+            <Text style={styles.iconText}>🏠</Text>
+          </View>
+          <Text style={styles.labelText}>Home</Text>
+        </TouchableOpacity>
+
         {/* Tasker Icon */}
         <TouchableOpacity 
           style={styles.dockButton}
@@ -66,8 +78,8 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(28, 28, 30, 0.95)",
     borderRadius: 24,
     paddingVertical: 12,
-    paddingHorizontal: 30,
-    gap: 50,
+    paddingHorizontal: 20,
+    gap: 35,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
     shadowColor: "#000",
